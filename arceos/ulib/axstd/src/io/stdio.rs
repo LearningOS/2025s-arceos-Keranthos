@@ -4,6 +4,9 @@ use crate::sync::{Mutex, MutexGuard};
 #[cfg(feature = "alloc")]
 use alloc::{string::String, vec::Vec};
 
+#[cfg(feature = "alloc")]
+use alloc::format;
+
 struct StdinRaw;
 struct StdoutRaw;
 
@@ -163,11 +166,28 @@ pub fn stdout() -> Stdout {
 
 #[doc(hidden)]
 pub fn __print_impl(args: core::fmt::Arguments) {
+    const RESET: &str = "\x1b[0m";
+    // const RED: &str = "\x1b[31m";
+    const GREEN: &str = "\x1b[32m";
+    // const YELLOW: &str = "\x1b[33m";
+    // const BLUE: &str = "\x1b[34m";
+    // const MAGENTA: &str = "\x1b[35m";
+    // const CYAN: &str = "\x1b[36m";
+    // const WHITE: &str = "\x1b[37m";
+
+    let color_prefix = GREEN;
+    let color_suffix = RESET;
+
     if cfg!(feature = "smp") {
-        // synchronize using the lock in axlog, to avoid interleaving
-        // with kernel logs
+        // let colored_message = format!("{}{}{}", color_prefix, args, color_suffix);
+        arceos_api::stdio::ax_console_write_bytes(color_prefix.as_bytes()).unwrap();
         arceos_api::stdio::ax_console_write_fmt(args).unwrap();
+        arceos_api::stdio::ax_console_write_bytes(color_suffix.as_bytes()).unwrap();
     } else {
-        stdout().lock().write_fmt(args).unwrap();
+        let mut stdout = stdout().lock();
+        stdout.write_all(color_prefix.as_bytes()).unwrap();
+        stdout.write_fmt(args).unwrap();
+        stdout.write_all(color_suffix.as_bytes()).unwrap();
+        stdout.flush().unwrap();
     }
 }
