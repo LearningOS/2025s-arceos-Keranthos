@@ -1,5 +1,5 @@
 use core::hash::Hash;
-use core::{alloc::Layout, hash::Hasher, ptr::NonNull};
+use core::hash::Hasher;
 
 #[cfg(feature = "alloc")]
 use alloc::{boxed::Box, vec, vec::Vec};

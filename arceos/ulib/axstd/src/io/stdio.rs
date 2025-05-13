@@ -175,19 +175,23 @@ pub fn __print_impl(args: core::fmt::Arguments) {
     // const CYAN: &str = "\x1b[36m";
     // const WHITE: &str = "\x1b[37m";
 
-    let color_prefix = GREEN;
-    let color_suffix = RESET;
+    let mut message = format!("{}", args);
+    let ends_with_newline = message.ends_with('\n');
+    if ends_with_newline {
+        message.pop();
+    }
+
+    let colored_message = if ends_with_newline {
+        format!("{}{}{}\n", GREEN, message, RESET)
+    } else {
+        format!("{}{}{}", GREEN, message, RESET)
+    };
 
     if cfg!(feature = "smp") {
-        // let colored_message = format!("{}{}{}", color_prefix, args, color_suffix);
-        arceos_api::stdio::ax_console_write_bytes(color_prefix.as_bytes()).unwrap();
-        arceos_api::stdio::ax_console_write_fmt(args).unwrap();
-        arceos_api::stdio::ax_console_write_bytes(color_suffix.as_bytes()).unwrap();
+        arceos_api::stdio::ax_console_write_bytes(colored_message.as_bytes()).unwrap();
     } else {
         let mut stdout = stdout().lock();
-        stdout.write_all(color_prefix.as_bytes()).unwrap();
-        stdout.write_fmt(args).unwrap();
-        stdout.write_all(color_suffix.as_bytes()).unwrap();
+        stdout.write_all(colored_message.as_bytes()).unwrap();
         stdout.flush().unwrap();
     }
 }

@@ -1,8 +1,8 @@
-    [92;1mBuilding[0m App: simple_hv, Arch: riscv64, Platform: riscv64-qemu-virt, App type: rust
-[37mcargo -C exercises/simple_hv/ build[0m [90m-Z unstable-options --target riscv64gc-unknown-none-elf --target-dir /home/sjhs/2025s-arceos-Keranthos/arceos/target --release  --features "axstd/log-level-warn"[0m
-[37mrust-objcopy --binary-architecture=riscv64[0m [90mexercises/simple_hv//simple_hv_riscv64-qemu-virt.elf --strip-all -O binary exercises/simple_hv//simple_hv_riscv64-qemu-virt.bin[0m
+    [92;1mBuilding[0m App: support_hashmap, Arch: riscv64, Platform: riscv64-qemu-virt, App type: rust
+[37mcargo -C exercises/support_hashmap/ build[0m [90m-Z unstable-options --target riscv64gc-unknown-none-elf --target-dir /home/sjhs/2025s-arceos-Keranthos/arceos/target --release  --features "axstd/log-level-warn"[0m
+[37mrust-objcopy --binary-architecture=riscv64[0m [90mexercises/support_hashmap//support_hashmap_riscv64-qemu-virt.elf --strip-all -O binary exercises/support_hashmap//support_hashmap_riscv64-qemu-virt.bin[0m
     [96;1mRunning[0m on qemu...
-[37mqemu-system-riscv64[0m [90m-m 128M -smp 1 -machine virt -bios default -kernel exercises/simple_hv//simple_hv_riscv64-qemu-virt.bin -drive if=pflash,file=/home/sjhs/2025s-arceos-Keranthos/arceos/pflash.img,format=raw,unit=1 -device virtio-blk-pci,drive=disk0 -drive id=disk0,if=none,format=raw,file=disk.img -nographic -D qemu.log -d in_asm,int,mmu,pcall,cpu_reset,guest_errors[0m
+[37mqemu-system-riscv64[0m [90m-m 128M -smp 1 -machine virt -bios default -kernel exercises/support_hashmap//support_hashmap_riscv64-qemu-virt.bin -drive if=pflash,file=/home/sjhs/2025s-arceos-Keranthos/arceos/pflash.img,format=raw,unit=1 -nographic -D qemu.log -d in_asm,int,mmu,pcall,cpu_reset,guest_errors[0m
 
 OpenSBI v1.0
    ____                    _____ ____ _____
@@ -65,10 +65,6 @@ smp = 1
 build_mode = release
 log_level = warn
 
-[37m[  2.552951 0 fatfs::dir:139] [31mIs a directory[m
-[m[37m[  2.731773 0 fatfs::dir:139] [31mIs a directory[m
-[m[37m[  2.924604 0 fatfs::dir:139] [31mIs a directory[m
-[m[37m[  3.145270 0 fatfs::dir:139] [31mIs a directory[m
-[mHypervisor ...
-app: /sbin/skernel2
-paddr: PA:0x80642000
+[32mRunning memory tests...[0m
+[32mtest_hashmap() OK![0m
+[32mMemory tests run OK![0m
