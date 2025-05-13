@@ -68,7 +68,7 @@ keywords = ["arceos", "kernel"]
 categories = ["os", "no-std"]
 
 [workspace.dependencies]
-axstd = { path = "ulib/axstd", features = ["alloc", "paging"] }
+axstd = { path = "ulib/axstd", features = ["alloc", "paging", "multitask"] }
 axlibc = { path = "ulib/axlibc" }
 
 arceos_api = { path = "api/arceos_api" }
