@@ -1,6 +1,7 @@
 mod hashmap;
 
-#[cfg(feature = "alloc")]
+extern crate alloc;
+
 pub use alloc::collections::{
     binary_heap::BinaryHeap,
     btree_map::BTreeMap,

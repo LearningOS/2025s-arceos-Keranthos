@@ -1,7 +1,8 @@
 use core::hash::Hash;
 use core::hash::Hasher;
 
-#[cfg(feature = "alloc")]
+extern crate alloc;
+
 use alloc::{boxed::Box, vec, vec::Vec};
 
 struct Node<K: core::hash::Hash, V> {
