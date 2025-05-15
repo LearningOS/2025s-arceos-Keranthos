@@ -36,6 +36,7 @@ void verify_file(const char *fname)
         exit(-1);
     }
     addr = mmap(NULL, 32, PROT_READ, MAP_PRIVATE, fd, 0);
+    printf("sys_map finish in mapfile!\n");
     if (addr == NULL) {
         printf("Map file error!\n");
         exit(-1);

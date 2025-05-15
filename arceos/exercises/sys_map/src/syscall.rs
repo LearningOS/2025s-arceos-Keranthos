@@ -2,11 +2,12 @@
 
 use core::ffi::{c_void, c_char, c_int};
 use axhal::arch::TrapFrame;
-use axhal::trap::{register_trap_handler, SYSCALL};
+use axhal::trap::{register_trap_handler, SYSCALL, PAGE_FAULT};
 use axerrno::LinuxError;
 use axtask::current;
 use axtask::TaskExtRef;
 use axhal::paging::MappingFlags;
+use axhal::mem::VirtAddr;
 use arceos_posix_api as api;
 
 const SYS_IOCTL: usize = 29;
@@ -21,6 +22,19 @@ const SYS_SET_TID_ADDRESS: usize = 96;
 const SYS_MMAP: usize = 222;
 
 const AT_FDCWD: i32 = -100;
+
+// Protection flags
+pub const PROT_READ: i32 = 0x1;
+pub const PROT_WRITE: i32 = 0x2;
+pub const PROT_EXEC: i32 = 0x4;
+
+// Mapping flags
+pub const MAP_SHARED: i32 = 0x01;
+pub const MAP_PRIVATE: i32 = 0x02;
+pub const MAP_FIXED: i32 = 0x10;
+pub const MAP_ANONYMOUS: i32 = 0x20;
+pub const MAP_NORESERVE: i32 = 0x4000;
+pub const MAP_STACK: i32 = 0x20000;
 
 /// Macro to generate syscall body
 ///
@@ -96,6 +110,65 @@ bitflags::bitflags! {
     }
 }
 
+impl From<MmapFlags> for MappingFlags {
+    fn from(value: MmapFlags) -> Self {
+        let mut flags = MappingFlags::USER;
+        if value.contains(MmapFlags::MAP_SHARED) || value.contains(MmapFlags::MAP_PRIVATE) {
+            flags |= MappingFlags::READ | MappingFlags::WRITE;
+        }
+        if value.contains(MmapFlags::MAP_ANONYMOUS) {
+            flags |= MappingFlags::UNCACHED;
+        }
+        if value.contains(MmapFlags::MAP_FIXED) {
+            flags |= MappingFlags::DEVICE;
+        }
+        flags
+    }
+}
+
+impl From<i32> for MmapProt {
+    fn from(prot: i32) -> Self {
+        let mut result = MmapProt::empty();
+        if prot & PROT_READ != 0 {
+            result |= MmapProt::PROT_READ;
+        }
+        if prot & PROT_WRITE != 0 {
+            result |= MmapProt::PROT_WRITE;
+        }
+        if prot & PROT_EXEC != 0 {
+            result |= MmapProt::PROT_EXEC;
+        }
+        result
+    }
+}
+
+impl From<i32> for MmapFlags {
+    fn from(flags: i32) -> Self {
+        let mut result = MmapFlags::empty();
+        if flags & MAP_SHARED != 0 {
+            result |= MmapFlags::MAP_SHARED;
+        }
+        if flags & MAP_PRIVATE != 0 {
+            result |= MmapFlags::MAP_PRIVATE;
+        }
+        if flags & MAP_FIXED != 0 {
+            result |= MmapFlags::MAP_FIXED;
+        }
+        if flags & MAP_ANONYMOUS != 0 {
+            result |= MmapFlags::MAP_ANONYMOUS;
+        }
+        if flags & MAP_NORESERVE != 0 {
+            result |= MmapFlags::MAP_NORESERVE;
+        }
+        if flags & MAP_STACK != 0 {
+            result |= MmapFlags::MAP_STACK;
+        }
+        result
+    }
+}
+
+
+
 #[register_trap_handler(SYSCALL)]
 fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
     ax_println!("handle_syscall [{}] ...", syscall_num);
@@ -140,7 +213,29 @@ fn sys_mmap(
     fd: i32,
     _offset: isize,
 ) -> isize {
-    unimplemented!("no sys_mmap!");
+    const PAGE_SIZE: usize = 4096;
+
+    if !addr.is_null() && (addr as usize) % PAGE_SIZE != 0 {
+        return -1;
+    }
+
+    let length_aligned = (length + PAGE_SIZE -1) & !(PAGE_SIZE - 1);
+
+    let mut mappingflag = MappingFlags::READ|MappingFlags::USER;
+    /*let protflag = MmapProt::from(prot);
+    let mapflag = MmapFlags::from(flags);
+    mappingflag |= MappingFlags::from(protflag);
+    mappingflag |= MappingFlags::from(mapflag); // :Result<Arc<File>, LinuxError>*/
+
+    let binding = axtask::current();
+    let mut addrspace = binding.task_ext().aspace.lock();
+    let file   = if fd != -1 {
+        Some(api::File::from_fd(fd as c_int).unwrap())
+    } else { None };
+    let ret = api::sys_mmap(VirtAddr::from_ptr_of(addr), length_aligned, mappingflag, file, &mut addrspace) as isize;
+    ax_println!("sys_mmap finish in lab");
+    ax_println!("return res: {}",VirtAddr::from_ptr_of(addr).as_usize() as isize);
+    ret
 }
 
 fn sys_openat(dfd: c_int, fname: *const c_char, flags: c_int, mode: api::ctypes::mode_t) -> isize {
@@ -173,4 +268,24 @@ fn sys_set_tid_address(tid_ptd: *const i32) -> isize {
 fn sys_ioctl(_fd: i32, _op: usize, _argp: *mut c_void) -> i32 {
     ax_println!("Ignore SYS_IOCTL");
     0
+}
+
+#[register_trap_handler(PAGE_FAULT)]
+fn handle_page_fault(vaddr: VirtAddr, access_flags: MappingFlags, is_user: bool) -> bool {
+    if is_user {
+        if !axtask::current()
+            .task_ext()
+            .aspace
+            .lock()
+            .handle_page_fault(vaddr, access_flags)
+        {
+            ax_println!("{}: segmentation fault, exit! fuck you!", axtask::current().id_name());
+            axtask::exit(-1);
+        } else {
+            ax_println!("{}: handle page fault OK!", axtask::current().id_name());
+        }
+        true
+    } else {
+        false
+    }
 }
