@@ -14,6 +14,7 @@ make disk_img
 
 make payload
 ./update_disk.sh payload/skernel2/skernel2
+./update_disk.sh payload/skernel/skernel
 
 make run A=exercises/simple_hv/ BLK=y > $tmp_file 2>/dev/null
 
