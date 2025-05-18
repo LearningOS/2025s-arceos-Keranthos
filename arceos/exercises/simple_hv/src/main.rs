@@ -37,7 +37,7 @@ fn main() {
     let mut uspace = axmm::new_user_aspace().unwrap();
 
     // Load vm binary file into address space.
-    if let Err(e) = load_vm_image("/sbin/skernel", &mut uspace) {
+    if let Err(e) = load_vm_image("/sbin/skernel2", &mut uspace) {
         panic!("Cannot load app! {:?}", e);
     }
 
