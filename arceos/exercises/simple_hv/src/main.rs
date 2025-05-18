@@ -68,9 +68,17 @@ fn prepare_vm_pgtable(ept_root: PhysAddr) {
 }
 
 fn run_guest(ctx: &mut VmCpuRegisters) -> bool {
+
+    ax_println!("start in: stval{:#x} sepc: {:#x}",
+                stval::read(),
+                ctx.guest_regs.sepc
+            );
+
     unsafe {
         _run_guest(ctx);
     }
+
+    ax_println!("finish run_guest");
 
     vmexit_handler(ctx)
 }
@@ -110,7 +118,6 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
                 ctx.guest_regs.sepc
             );
             ctx.guest_regs.sepc += 4;
-            return true;
         },
         Trap::Exception(Exception::LoadGuestPageFault) => {
             ax_println!("LoadGuestPageFault: stval{:#x} sepc: {:#x}",
@@ -118,7 +125,13 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
                 ctx.guest_regs.sepc
             );
             ctx.guest_regs.sepc += 4;
-            return true;
+        },
+        Trap::Exception(Exception::StorePageFault) => {
+            ax_println!("StorePageFault: stval{:#x} sepc: {:#x}",
+                stval::read(),
+                ctx.guest_regs.sepc
+            );
+            ctx.guest_regs.sepc += 4;
         },
         _ => {
             panic!(
