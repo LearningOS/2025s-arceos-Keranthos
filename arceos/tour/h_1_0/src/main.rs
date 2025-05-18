@@ -70,7 +70,7 @@ fn run_guest(ctx: &mut VmCpuRegisters) {
         _run_guest(ctx);
     }
 
-    vmexit_handler(ctx)
+    vmexit_handler(ctx);
 }
 
 fn vmexit_handler(ctx: &VmCpuRegisters) {

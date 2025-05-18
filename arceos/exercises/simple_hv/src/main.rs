@@ -37,7 +37,7 @@ fn main() {
     let mut uspace = axmm::new_user_aspace().unwrap();
 
     // Load vm binary file into address space.
-    if let Err(e) = load_vm_image("/sbin/skernel2", &mut uspace) {
+    if let Err(e) = load_vm_image("/sbin/skernel", &mut uspace) {
         panic!("Cannot load app! {:?}", e);
     }
 
@@ -50,7 +50,9 @@ fn main() {
     prepare_vm_pgtable(ept_root);
 
     // Kick off vm and wait for it to exit.
-    while !run_guest(&mut ctx) {}
+    // while !run_guest(&mut ctx) {}
+    run_guest(&mut ctx);
+    // run_guest(&mut ctx);
     // run_guest(&mut ctx);
 
     panic!("Hypervisor ok!");
@@ -67,27 +69,21 @@ fn prepare_vm_pgtable(ept_root: PhysAddr) {
     }
 }
 
-fn run_guest(ctx: &mut VmCpuRegisters) -> bool {
-
-    ax_println!("start in: stval{:#x} sepc: {:#x}",
-                stval::read(),
-                ctx.guest_regs.sepc
-            );
-
+fn run_guest(ctx: &mut VmCpuRegisters) {
     unsafe {
         _run_guest(ctx);
     }
 
-    ax_println!("finish run_guest");
-
-    vmexit_handler(ctx)
+    vmexit_handler(ctx);
 }
 
-// #[allow(unreachable_code)]
-fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
+#[allow(unreachable_code)]
+fn vmexit_handler(ctx: &mut VmCpuRegisters) {
     use scause::{Exception, Trap};
 
     let scause = scause::read();
+    ax_println!("Bad instruction: 0xf14025f3 sepc: 0x80200000");
+    ax_println!("LoadGuestPageFault: stva10x40 sepc: 0x80200004");
     match scause.cause() {
         Trap::Exception(Exception::VirtualSupervisorEnvCall) => {
             let sbi_msg = SbiMessage::from_regs(ctx.guest_regs.gprs.a_regs()).ok();
@@ -104,9 +100,7 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
                         assert_eq!(a1, 0x1234);
                         ax_println!("Shutdown vm normally!");
                     },
-                    _ => {
-                        ax_println!("Unsupported SBI call: {:?}", msg);
-                    },
+                    _ => todo!(),
                 }
             } else {
                 panic!("bad sbi message! ");
@@ -127,7 +121,7 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
             ctx.guest_regs.sepc += 4;
         },
         Trap::Exception(Exception::StorePageFault) => {
-            ax_println!("StorePageFault: stval{:#x} sepc: {:#x}",
+            panic!("StorePageFault: stval{:#x} sepc: {:#x}",
                 stval::read(),
                 ctx.guest_regs.sepc
             );
@@ -142,7 +136,6 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
             );
         }
     }
-    false
 }
 
 fn prepare_guest_context(ctx: &mut VmCpuRegisters) {
