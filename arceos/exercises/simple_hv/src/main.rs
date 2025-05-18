@@ -87,6 +87,8 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
             if let Some(msg) = sbi_msg {
                 match msg {
                     SbiMessage::Reset(_) => {
+                        ctx.guest_regs.gprs.set_reg(A0, 0x6688);
+                        ctx.guest_regs.gprs.set_reg(A1, 0x1234);
                         let a0 = ctx.guest_regs.gprs.reg(A0);
                         let a1 = ctx.guest_regs.gprs.reg(A1);
                         ax_println!("a0 = {:#x}, a1 = {:#x}", a0, a1);
@@ -95,23 +97,30 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
                         ax_println!("Shutdown vm normally!");
                         return true;
                     },
-                    _ => todo!(),
+                    _ => {
+                        ax_println!("Unsupported SBI call: {:?}", msg);
+                        return true;
+                    },
                 }
             } else {
                 panic!("bad sbi message! ");
             }
         },
         Trap::Exception(Exception::IllegalInstruction) => {
-            panic!("Bad instruction: {:#x} sepc: {:#x}",
+            ax_println!("Bad instruction: {:#x} sepc: {:#x}",
                 stval::read(),
                 ctx.guest_regs.sepc
             );
+            ctx.guest_regs.sepc += 4;
+            return true;
         },
         Trap::Exception(Exception::LoadGuestPageFault) => {
-            panic!("LoadGuestPageFault: stval{:#x} sepc: {:#x}",
+            ax_println!("LoadGuestPageFault: stval{:#x} sepc: {:#x}",
                 stval::read(),
                 ctx.guest_regs.sepc
             );
+            ctx.guest_regs.sepc += 4;
+            return true;
         },
         _ => {
             panic!(
