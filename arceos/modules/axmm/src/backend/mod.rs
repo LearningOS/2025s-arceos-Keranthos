@@ -79,7 +79,7 @@ impl Backend {
         page_table: &mut PageTable,
     ) -> bool {
         match *self {
-            Self::Linear { .. } => { panic!("is linear!"); false }, // Linear mappings should not trigger page faults.
+            Self::Linear { .. } => false, // Linear mappings should not trigger page faults.
             Self::Alloc { populate } => {
                 self.handle_page_fault_alloc(vaddr, orig_flags, page_table, populate)
             }

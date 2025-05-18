@@ -262,7 +262,6 @@ impl AddrSpace {
     /// fault).
     pub fn handle_page_fault(&mut self, vaddr: VirtAddr, access_flags: MappingFlags) -> bool {
         if !self.va_range.contains(vaddr) {
-            panic!("not in va_range");
             return false;
         }
         if let Some(area) = self.areas.find(vaddr) {
@@ -272,10 +271,7 @@ impl AddrSpace {
                     .backend()
                     .handle_page_fault(vaddr, orig_flags, &mut self.pt);
             }
-        } else {
-            panic!("not access_flags");
         }
-        panic!("not match!");
         false
     }
 

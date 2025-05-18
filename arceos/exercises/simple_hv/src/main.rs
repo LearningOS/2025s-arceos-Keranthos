@@ -50,8 +50,8 @@ fn main() {
     prepare_vm_pgtable(ept_root);
 
     // Kick off vm and wait for it to exit.
-    while !run_guest(&mut ctx) {
-    }
+    while !run_guest(&mut ctx) {}
+    // run_guest(&mut ctx);
 
     panic!("Hypervisor ok!");
 }
@@ -75,7 +75,7 @@ fn run_guest(ctx: &mut VmCpuRegisters) -> bool {
     vmexit_handler(ctx)
 }
 
-#[allow(unreachable_code)]
+// #[allow(unreachable_code)]
 fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
     use scause::{Exception, Trap};
 
@@ -95,11 +95,9 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
                         assert_eq!(a0, 0x6688);
                         assert_eq!(a1, 0x1234);
                         ax_println!("Shutdown vm normally!");
-                        return true;
                     },
                     _ => {
                         ax_println!("Unsupported SBI call: {:?}", msg);
-                        return true;
                     },
                 }
             } else {

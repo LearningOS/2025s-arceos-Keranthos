@@ -93,19 +93,15 @@ impl Backend {
         populate: bool,
     ) -> bool {
         if populate {
-            panic!("populate yes!");
             false // Populated mappings should not trigger page faults.
         } else if let Some(frame) = alloc_frame(true) {
             // Allocate a physical frame lazily and map it to the fault address.
             // `vaddr` does not need to be aligned. It will be automatically
             // aligned during `pt.remap` regardless of the page size.
-            let res = pt.remap(vaddr, frame, orig_flags)
+            pt.remap(vaddr, frame, orig_flags)
                 .map(|(_, tlb)| tlb.flush())
-                .is_ok();
-            if res == false { panic!("return 0!"); }
-            res
+                .is_ok()
         } else {
-            panic!("alloc_frame false!");
             false
         }
     }
