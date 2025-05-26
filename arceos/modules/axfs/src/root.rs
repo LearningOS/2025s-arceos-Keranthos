@@ -133,6 +133,7 @@ impl VfsNodeOps for RootDirectory {
     }
 
     fn rename(&self, src_path: &str, dst_path: &str) -> VfsResult {
+        // panic!("panic at rootdir rename!");
         self.lookup_mounted_fs(src_path, |fs, rest_path| {
             if rest_path.is_empty() {
                 ax_err!(PermissionDenied) // cannot rename mount points
@@ -306,5 +307,6 @@ pub(crate) fn rename(old: &str, new: &str) -> AxResult {
         warn!("dst file already exist, now remove it");
         remove_file(None, new)?;
     }
+    // panic!("rename in root!");
     parent_node_of(None, old).rename(old, new)
 }

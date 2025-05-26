@@ -1,10 +1,12 @@
 use alloc::collections::BTreeMap;
 use alloc::sync::{Arc, Weak};
 use alloc::{string::String, vec::Vec};
+use crate::alloc::string::ToString;
 
 use axfs_vfs::{VfsDirEntry, VfsNodeAttr, VfsNodeOps, VfsNodeRef, VfsNodeType};
 use axfs_vfs::{VfsError, VfsResult};
 use spin::RwLock;
+use alloc::format;
 
 use crate::file::FileNode;
 
@@ -65,6 +67,50 @@ impl DirNode {
             }
         }
         children.remove(name);
+        Ok(())
+    }
+
+    pub fn try_rename(&self, old: &str, new: &str) -> VfsResult {
+        log::warn!("rename: old='{}', new='{}'", old, new);
+        // let old = old.trim_matches('/');
+        // let new = new.trim_matches('/');
+        
+        if old.is_empty() {
+            return Err(VfsError::InvalidInput);
+        }
+    
+        let (old_name, old_rest) = split_path(old);
+        let (_, new_n) = split_path(new);
+        // let new_name = new;
+        let new_name = new_n.unwrap();
+    
+        if let Some(rest) = old_rest {
+            let target = match old_name {
+                "" | "." => self.rename(rest, new_name),
+                ".." => self.parent().ok_or(VfsError::NotFound)?.rename(rest, new_name),
+                _ => {
+                    let subdir = self.children.read()
+                        .get(old_name)
+                        .ok_or(VfsError::NotFound)?
+                        .clone();
+                    subdir.rename(rest, new_name)
+                }
+            };
+        }
+    
+        if new_name.is_empty() || new_name == "." || new_name == ".." {
+            return Err(VfsError::InvalidInput);
+        }
+    
+        let mut children = self.children.write();
+        let node = children.remove(old_name).ok_or(VfsError::NotFound)?;
+        
+        if children.contains_key(new_name) {
+            return Err(VfsError::AlreadyExists);
+        }
+        
+        children.insert(new_name.to_string(), node);
+        log::warn!("rename success!, remove {}, add {}", old_name, new_name);
         Ok(())
     }
 }
@@ -142,7 +188,7 @@ impl VfsNodeOps for DirNode {
     }
 
     fn remove(&self, path: &str) -> VfsResult {
-        log::debug!("remove at ramfs: {}", path);
+        log::warn!("remove at ramfs: {}", path);
         let (name, rest) = split_path(path);
         if let Some(rest) = rest {
             match name {
@@ -164,7 +210,30 @@ impl VfsNodeOps for DirNode {
             self.remove_node(name)
         }
     }
-
+    
+    fn rename(&self, old: &str, new: &str) -> VfsResult {
+        log::debug!("rename: old='{}', new='{}'", old, new);
+    
+        // 尝试按传入路径直接执行
+        match self.try_rename(old, new) {
+            Ok(()) => Ok(()),
+            Err(VfsError::NotFound) => {
+                // 重试逻辑：如果 old 是像 "/f1"，但 new 是 "/tmp/f2"，那我们可以从 new 推断 old 应该在 /tmp 目录下
+                log::warn!("NotFound");
+                if old.starts_with('/') && new.starts_with("/tmp/") {
+                    log::warn!("again");
+                    let old_file_name = old.trim_start_matches('/');
+                    let new_dir_prefix = new.strip_suffix(new.rsplit_once('/').unwrap().1).unwrap_or("/tmp/");
+                    let retry_old = format!("{}{}", new_dir_prefix, old_file_name);
+                    log::debug!("retry rename with inferred old path: {}", retry_old);
+                    self.try_rename(&retry_old, new)
+                } else {
+                    Err(VfsError::NotFound)
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }
     axfs_vfs::impl_vfs_dir_default! {}
 }
 

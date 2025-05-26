@@ -18,6 +18,7 @@ pub use self::file::FileNode;
 use alloc::sync::Arc;
 use axfs_vfs::{VfsNodeRef, VfsOps, VfsResult};
 use spin::once::Once;
+use axfs_vfs::VfsNodeOps;
 
 /// A RAM filesystem that implements [`axfs_vfs::VfsOps`].
 pub struct RamFileSystem {
@@ -28,6 +29,7 @@ pub struct RamFileSystem {
 impl RamFileSystem {
     /// Create a new instance.
     pub fn new() -> Self {
+        // println!("create an ramfs");
         Self {
             parent: Once::new(),
             root: DirNode::new(None),
@@ -36,7 +38,13 @@ impl RamFileSystem {
 
     /// Returns the root directory node in [`Arc<DirNode>`](DirNode).
     pub fn root_dir_node(&self) -> Arc<DirNode> {
-        self.root.clone()
+        // panic!("panic at ramfs::root_dir!");
+        // self.root.clone();
+        panic!("panic at ramfs::root_dir!");
+    }
+
+    pub fn root_dir_rename(&self, rest_path: &str, dst_path: &str) -> VfsResult {
+        self.root.clone().rename(rest_path, dst_path)
     }
 }
 
@@ -51,6 +59,7 @@ impl VfsOps for RamFileSystem {
     }
 
     fn root_dir(&self) -> VfsNodeRef {
+        log::warn!("root_dir!");
         self.root.clone()
     }
 }
